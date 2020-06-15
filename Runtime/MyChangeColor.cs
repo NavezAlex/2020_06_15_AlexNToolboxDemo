@@ -1,9 +1,6 @@
-﻿using System.Collections;
-using System.Collections.Generic;
-using UnityEngine;
-using UnityEngine.PlayerLoop;
+﻿using UnityEngine;
 
-public class ChangeColor : MonoBehaviour
+public class MyChangeColor : MonoBehaviour
 {
     [SerializeField]
     Color _colorToChange, _colorToReturn;
