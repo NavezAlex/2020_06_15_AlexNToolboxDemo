@@ -21,16 +21,17 @@ public class Teleportation : MonoBehaviour
     private Vector3 _targetPos;
     private Vector3 _currentPos;
 
-    bool _tpTarget = false;
+    bool _tpTarget;
+    bool _tpCheck;
 
     private void Update()
     {
-        if (_tpTarget)
+        if (_tpTarget == true)
         {
             RecordCurrentPos();
             StartDisplayRay();
         }
-        else if (!_tpTarget)
+        else if (_tpTarget == false && _tpCheck)
         {
             ApplyTeleport();
             StopDisplayRay();
@@ -41,10 +42,12 @@ public class Teleportation : MonoBehaviour
     public void StartTeleport()
     {
         _tpTarget = true;
+        _tpCheck = false;
     }
     public void StopTeleport()
     {
         _tpTarget = false;
+        _tpCheck = true;
     }
 
 
@@ -98,11 +101,13 @@ public class Teleportation : MonoBehaviour
 
     private void ApplyTeleport()
     {
-        _tpTarget = false;
+        _tpCheck = false;
+        
+        //Decommente this ligne and delete the next when using VR
+        //Vector3 _offset = new Vector3(_targetPos.x - _head.transform.position.x, _targetPos.y - _cameraRig.position.y, _targetPos.z - _head.transform.position.z);
+        Vector3 _offset = new Vector3(0,0,2);
 
-        Vector3 _offset = new Vector3(_targetPos.x - _head.transform.position.x, _targetPos.y - _cameraRig.position.y, _targetPos.z - _head.transform.position.z);
-
-        _cameraRig.position += _offset;
+        _head.position += _offset;
     }
 
     //Reset the Ray
