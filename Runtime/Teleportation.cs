@@ -14,7 +14,7 @@ public class Teleportation : MonoBehaviour
     [SerializeField]
     float _laserSegmentDistance = 1f, _dropPerSegment = .1f;
 
-    //Layer where we can teleport
+    //Layer where we can teleport => not the layer numer = no teleport
     [SerializeField]
     int _targetLayer;
 
@@ -102,10 +102,8 @@ public class Teleportation : MonoBehaviour
     private void ApplyTeleport()
     {
         _tpCheck = false;
-        
-        //Decommente this ligne and delete the next when using VR
-        //Vector3 _offset = new Vector3(_targetPos.x - _head.transform.position.x, _targetPos.y - _cameraRig.position.y, _targetPos.z - _head.transform.position.z);
-        Vector3 _offset = new Vector3(0,0,2);
+
+        Vector3 _offset = new Vector3(_targetPos.x - _head.transform.position.x, _targetPos.y - _cameraRig.position.y, _targetPos.z - _head.transform.position.z);
 
         _head.position += _offset;
     }
