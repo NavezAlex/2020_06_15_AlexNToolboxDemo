@@ -1,119 +1,158 @@
-﻿using UnityEngine;
+﻿using System;
+using System.Collections.Generic;
+using UnityEngine;
+
+
+
+/// how to use   IsHighlightable.GetAllHighlightable();
+///  foreach (IsHighlightable item in IsHighlightable.GetAllHighlightable())
+//{
+//    Transform itemTranform = item.transform;
+//    Do something by item
+//}
+
+//public class IsHighlightable : MonoBehaviour
+//{
+//    public static List<IsHighlightable> inScene = new List<IsHighlightable>();
+
+//    public static List<IsHighlightable> GetAllHighlightable() { return inScene; }
+//    private void Start()
+//    {
+//        inScene.Add(this);
+//    }
+//    private void OnDestroy()
+//    {
+//        inScene.Remove(this);
+//    }
+//}
+
+
 
 //For the creation of the Laser
 [RequireComponent(typeof(LineRenderer))]
 public class Teleportation : MonoBehaviour
 {
+    public LayerMask m_raycastLayer;
     [SerializeField]
-    Transform _head, _cameraRig;
+    Transform _userHead, _rootToTeleport, _usePointerAnchor;
 
     [SerializeField]
     LineRenderer _laser;
-    [SerializeField]
-    int _laserSteps = 20;
-    [SerializeField]
-    float _laserSegmentDistance = 1f, _dropPerSegment = .1f;
+    [SerializeField] float _maxDistanceRaycast =5f;
 
     //Layer where we can teleport => not the layer numer = no teleport
     [SerializeField]
     int _targetLayer;
 
-    private Vector3 _targetPos;
-    private Vector3 _currentPos;
-
+    private Vector3 _targetPosition;
+    private Vector3 _currentHeadPosition;
+    private Vector3 _currentPointerPosition;
+    private Quaternion _currentPointerRotation;
     bool _tpTarget;
-    bool _tpCheck;
+    bool _checkThatUserTeleported;
+
+    [Header("Debug (Don't Touch)")]
+    public bool _hasHit;
+    public Vector3 _hitPosition;
+
 
     private void Update()
     {
+       
+
+
         if (_tpTarget == true)
         {
-            RecordCurrentPos();
-            StartDisplayRay();
+            RecordCurrentPosition();
+            ComputeWhereUserNeedToBeTeleported(out _hasHit, out _hitPosition);
+            DrawLineRedAndGreen(_hasHit, _hitPosition);
+          
         }
-        else if (_tpTarget == false && _tpCheck)
+        else if (_tpTarget == false && _checkThatUserTeleported)
         {
-            ApplyTeleport();
+            ApplyTeleport(_hitPosition);
             StopDisplayRay();
         }
+    }
+
+
+    public Color _valideColor = Color.green;
+    public Color _invalideColor = Color.red;
+    private void DrawLineRedAndGreen(bool hasHit, Vector3 hitPosition)
+    {
+        if (hasHit)
+        {
+            _laser.startColor = _laser.endColor = _valideColor;
+            _laser.positionCount=2;
+            _laser.SetPosition(0, _usePointerAnchor.position);
+            _laser.SetPosition(1, hitPosition);
+
+        }
+        else
+        {
+            _laser.startColor = _laser.endColor= _invalideColor;
+            _laser.positionCount = 2;
+            _laser.SetPosition(0, _usePointerAnchor.position);
+            _laser.SetPosition(1, _usePointerAnchor.position + _usePointerAnchor.forward * 100);
+        }
+
     }
 
     //See TeleportInput for using
     public void StartTeleport()
     {
         _tpTarget = true;
-        _tpCheck = false;
+        _checkThatUserTeleported = false;
     }
     public void StopTeleport()
     {
         _tpTarget = false;
-        _tpCheck = true;
+        _checkThatUserTeleported = true;
     }
 
 
-    private void RecordCurrentPos()
+    private void RecordCurrentPosition()
     {
-        _currentPos = transform.position;
+        _currentHeadPosition = _userHead.position;
     }
 
     //Creation of the Ray
-    private void StartDisplayRay()
+    private void ComputeWhereUserNeedToBeTeleported(out bool hasHit,out Vector3 computWorldPositions)
     {
+        hasHit = false;
+        computWorldPositions = new Vector3();
+
         _tpTarget = false;
         RaycastHit _hit;
-        Vector3 _origine = _currentPos;
-        _laser.SetPosition(0, _origine);
-
-        for (int i = 0; i < _laserSteps - 1; i++)
+        Vector3 _origine = _currentPointerPosition;
+        hasHit = Physics.Raycast(_usePointerAnchor.position, _usePointerAnchor.forward, out _hit, _maxDistanceRaycast, m_raycastLayer);
+        if (hasHit)
         {
-            Vector3 _offset = (transform.forward + (Vector3.down * _dropPerSegment * i)).normalized * _laserSegmentDistance;
-
-            if (Physics.Raycast(_origine, _offset, out _hit, _laserSegmentDistance))
-            {
-                for (int j = i + 1; j < _laser.positionCount; j++)
-                {
-                    _laser.SetPosition(j, _hit.point);
-                }
-
-                //Check if the zone targeted is allowed
-                if (_hit.transform.gameObject.layer == _targetLayer)
-                {
-                    //Before, Apply a material color in LineRenderer
-                    _laser.startColor = _laser.endColor = Color.green;
-                    _targetPos = _hit.point;
-                    _tpTarget = true;
-                    return;
-                }
-                else
-                {
-                    _laser.startColor = _laser.endColor = Color.red;
-                    return;
-                }
-            }
-            else
-            {
-                _laser.SetPosition(1 + i, _origine + _offset);
-                _origine += _offset;
-            }
+             _tpTarget = true;
+             computWorldPositions = _hit.point;
         }
-        _laser.startColor = _laser.endColor = Color.red;
+            
     }
 
-    private void ApplyTeleport()
+
+    private void ApplyTeleport(Vector3 whereToTeleport)
     {
-        _tpCheck = false;
+        _checkThatUserTeleported = false;
+        Vector3 _offset = ComputeTheOffset();
+        _rootToTeleport.position = whereToTeleport+ _offset;
+    }
 
-        Vector3 _offset = new Vector3(_targetPos.x - _head.transform.position.x, _targetPos.y - _cameraRig.position.y, _targetPos.z - _head.transform.position.z);
+    private Vector3 ComputeTheOffset()
+    {
+        Vector3 headOn2D = _userHead.position;
+        headOn2D.y = _rootToTeleport.position.y;
+        return _rootToTeleport.position - headOn2D;
 
-        _head.position += _offset;
     }
 
     //Reset the Ray
     private void StopDisplayRay()
     {
-        for (int i = 0; i < _laser.positionCount; i++)
-        {
-            _laser.SetPosition(i, Vector3.zero);
-        }
+        _laser.positionCount = 0;
     }
 }
